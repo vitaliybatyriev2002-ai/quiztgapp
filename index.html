@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Верификация</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --tg-bg:        var(--tg-theme-bg-color, #1c1c1e);
+      --tg-secondary: var(--tg-theme-secondary-bg-color, #2c2c2e);
+      --tg-text:      var(--tg-theme-text-color, #ffffff);
+      --tg-hint:      var(--tg-theme-hint-color, #8e8e93);
+      --tg-button:    var(--tg-theme-button-color, #5856d6);
+      --tg-btn-text:  var(--tg-theme-button-text-color, #ffffff);
+      --radius-card:  20px;
+      --radius-btn:   14px;
+      --transition:   0.35s cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--tg-bg);
+      color: var(--tg-text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      overscroll-behavior: none;
+    }
+
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 24px 16px 40px;
+    }
+
+    /* ── Screens ── */
+    .screen {
+      width: 100%;
+      max-width: 480px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      animation: fadeUp .4s ease both;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Logo ── */
+    .logo {
+      width: 80px; height: 80px;
+      border-radius: 24px;
+      background: var(--tg-button);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 8px 32px rgba(88,86,214,.4);
+      margin-top: 8px;
+    }
+
+    .screen-title {
+      font-size: 26px; font-weight: 700;
+      text-align: center; line-height: 1.2;
+    }
+    .screen-sub {
+      font-size: 15px; color: var(--tg-hint);
+      text-align: center; line-height: 1.5;
+      max-width: 340px;
+    }
+
+    /* ── Terms scrollable box ── */
+    .terms-box {
+      width: 100%;
+      background: var(--tg-secondary);
+      border-radius: var(--radius-card);
+      padding: 18px 16px;
+      max-height: 240px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--tg-hint);
+    }
+    .terms-box h3 {
+      font-size: 15px; font-weight: 700;
+      color: var(--tg-text);
+      margin-bottom: 10px;
+    }
+    .terms-box ul {
+      padding-left: 18px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+
+    /* ── Checkbox ── */
+    .checkbox-wrap {
+      width: 100%;
+      display: flex; align-items: center; gap: 12px;
+      background: var(--tg-secondary);
+      border-radius: 14px;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .checkbox-wrap input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 22px; height: 22px;
+      min-width: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--tg-hint);
+      background: var(--tg-bg);
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+    .checkbox-wrap input[type="checkbox"]:checked {
+      background: #34c759;
+      border-color: #34c759;
+    }
+    .checkbox-wrap input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 4px; top: 1px;
+      width: 10px; height: 6px;
+      border-left: 2.5px solid #fff;
+      border-bottom: 2.5px solid #fff;
+      transform: rotate(-45deg);
+    }
+    .checkbox-wrap span {
+      font-size: 15px; font-weight: 500;
+      line-height: 1.4;
+    }
+
+    /* ── Buttons ── */
+    .main-btn {
+      width: 100%;
+      height: 54px;
+      border: none; border-radius: var(--radius-btn);
+      font-size: 17px; font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      outline: none;
+    }
+    .main-btn:active:not(:disabled) { opacity: .85; transform: scale(.98); }
+    .main-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .btn-success { background: #34c759; color: #fff; }
+    .btn-primary { background: var(--tg-button); color: var(--tg-btn-text); }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      width: 100%;
+      background: var(--tg-secondary);
+      border-radius: 100px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--tg-button);
+      border-radius: 100px;
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+    }
+    .progress-meta {
+      width: 100%;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .progress-label { font-size: 13px; color: var(--tg-hint); }
+
+    /* ── Question card ── */
+    .question-card {
+      width: 100%;
+      background: var(--tg-secondary);
+      border-radius: var(--radius-card);
+      padding: 22px 20px;
+    }
+    .question-num {
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .8px;
+      color: var(--tg-button);
+      margin-bottom: 10px;
+    }
+    .question-text {
+      font-size: 19px; font-weight: 600;
+      line-height: 1.4;
+    }
+
+    /* ── Answer buttons ── */
+    .answers { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+
+    .answer-btn {
+      width: 100%;
+      background: var(--tg-secondary);
+      color: var(--tg-text);
+      border: 2px solid transparent;
+      border-radius: var(--radius-btn);
+      padding: 16px 18px;
+      font-size: 16px; font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex; align-items: center; gap: 12px;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .answer-btn:hover:not(:disabled) { border-color: var(--tg-button); }
+    .answer-btn:active:not(:disabled) { transform: scale(.98); }
+
+    .answer-btn .letter {
+      min-width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--tg-bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      color: var(--tg-hint);
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .answer-btn.correct  { border-color: #34c759; background: color-mix(in srgb, #34c759 15%, var(--tg-secondary)); }
+    .answer-btn.correct .letter { background: #34c759; color: #fff; }
+    .answer-btn.wrong    { border-color: #ff3b30; background: color-mix(in srgb, #ff3b30 12%, var(--tg-secondary)); }
+    .answer-btn.wrong .letter   { background: #ff3b30; color: #fff; }
+    .answer-btn:disabled { cursor: default; }
+
+    /* ── Feedback ── */
+    .feedback-msg {
+      width: 100%;
+      background: color-mix(in srgb, #ff3b30 10%, var(--tg-secondary));
+      border: 1.5px solid #ff3b30;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 15px; font-weight: 500;
+      color: #ff3b30;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity .25s ease, transform .25s ease;
+      pointer-events: none;
+    }
+    .feedback-msg.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Success ── */
+    .result-icon {
+      font-size: 80px;
+      animation: pop .5s cubic-bezier(.175,.885,.32,1.275) both;
+    }
+    @keyframes pop {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+    .score-badge {
+      background: var(--tg-secondary);
+      border-radius: 100px;
+      padding: 10px 24px;
+      font-size: 15px; font-weight: 600;
+      color: var(--tg-hint);
+    }
+    .score-badge span { color: var(--tg-text); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════════ ЭКРАН 1: Правила ══════════════ -->
+  <div class="screen active" id="screen-terms">
+    <div class="logo">🛡️</div>
+    <div class="screen-title">Правила чата</div>
+    <div class="screen-sub">Прочитай правила перед вступлением</div>
+
+    <div class="terms-box">
+      <h3>Обязательно к прочтению</h3>
+      <ul>
+        <li>Запрещён спам, флуд и реклама без разрешения администрации.</li>
+        <li>Общайся уважительно — грубость и оскорбления недопустимы.</li>
+        <li>Перед вопросом проверь закреплённые сообщения и историю чата.</li>
+        <li>Офф-топик публикуй только в разрешённых темах.</li>
+        <li>Вызывать администраторов без повода запрещено.</li>
+        <li>Нарушения правил ведут к предупреждениям или блокировке.</li>
+      </ul>
+    </div>
+
+    <label class="checkbox-wrap" for="agree-check">
+      <input type="checkbox" id="agree-check" onchange="onAgreeChange(this)" />
+      <span>Я прочитал(-а) и принимаю правила чата</span>
+    </label>
+
+    <button class="main-btn btn-success" id="continue-btn" disabled onclick="startQuiz()">
+      Продолжить →
+    </button>
+  </div>
+
+  <!-- ══════════════ ЭКРАН 2: Квиз ══════════════ -->
+  <div class="screen" id="screen-question">
+    <div style="width:100%;display:flex;flex-direction:column;gap:8px;">
+      <div class="progress-meta">
+        <span class="progress-label" id="q-label">Вопрос 1 / 5</span>
+        <span class="progress-label" id="q-score">✅ 0</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="question-card">
+      <div class="question-num" id="q-num">Вопрос 1</div>
+      <div class="question-text" id="q-text">...</div>
+    </div>
+
+    <div class="answers" id="answers-wrap"></div>
+
+    <div class="feedback-msg" id="feedback-msg">😬 Не совсем. Попробуй ещё раз!</div>
+  </div>
+
+  <!-- ══════════════ ЭКРАН 3: Успех ══════════════ -->
+  <div class="screen" id="screen-success">
+    <div class="result-icon">🎉</div>
+    <div class="screen-title">Ты принят!</div>
+    <div class="screen-sub">
+      Верификация пройдена успешно.<br>
+      Добро пожаловать в чат!
+    </div>
+    <div class="score-badge">Правильно: <span id="score-ok">0</span> / <span id="score-total">0</span></div>
+    <button class="main-btn btn-success" onclick="enterGroup()">
+      Войти в чат ✓
+    </button>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   ВОПРОСЫ — редактируй здесь
+   ═══════════════════════════════════════════════════ */
+const CONFIG = {
+  shuffleQ: true,   // перемешивать вопросы
+  shuffleA: true,   // перемешивать варианты ответа
+};
+
+const QUESTIONS_RAW = [
+  {
+    text: "Что запрещено в нашем чате?",
+    options: ["Обсуждение игр", "Спам и реклама", "Отправка скриншотов", "Задавать вопросы"],
+    correct: 1,
+  },
+  {
+    text: "Как правильно обратиться к администратору?",
+    options: ["Бомбардировать сообщениями", "Тегать без повода", "Вежливо и по существу", "Грубо требовать"],
+    correct: 2,
+  },
+  {
+    text: "Что нужно сделать перед вопросом в чате?",
+    options: ["Написать всем участникам", "Дождаться ночи", "Ничего, просто спросить", "Проверить закреплённые сообщения"],
+    correct: 3,
+  },
+  {
+    text: "Какое поведение приветствуется?",
+    options: ["Флуд и оффтоп", "Капслок в каждом сообщении", "Уважение и чёткие сообщения", "Постоянные упоминания всех"],
+    correct: 2,
+  },
+  {
+    text: "Что происходит при нарушении правил?",
+    options: ["Ничего", "Выдаётся предупреждение или блокировка", "Удаляются только сообщения", "Просто предупредят"],
+    correct: 1,
+  },
+];
+/* ═══════════════════════════════════════════════════ */
+
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.disableVerticalSwipes?.();
+  tg.BackButton?.hide();
+}
+
+let questions = [];
+let current   = 0;
+let score     = 0;
+let locked    = false; // блокировка во время анимации
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.toggle('active', s.id === id);
+  });
+}
+
+/* ─── Экран 1: чекбокс ─── */
+function onAgreeChange(cb) {
+  document.getElementById('continue-btn').disabled = !cb.checked;
+}
+
+/* ─── Старт ─── */
+function startQuiz() {
+  let qs = CONFIG.shuffleQ ? shuffle(QUESTIONS_RAW) : [...QUESTIONS_RAW];
+  questions = qs.map(q => {
+    if (!CONFIG.shuffleA) return { ...q };
+    const correctVal = q.options[q.correct];
+    const shuffled   = shuffle([...q.options]);
+    return { text: q.text, options: shuffled, correct: shuffled.indexOf(correctVal) };
+  });
+  current = 0;
+  score   = 0;
+  locked  = false;
+  renderQuestion();
+  show('screen-question');
+}
+
+/* ─── Рендер вопроса ─── */
+function renderQuestion() {
+  locked = false;
+  const q   = questions[current];
+  const tot = questions.length;
+  const pct = (current / tot) * 100;
+
+  document.getElementById('q-num').textContent   = `Вопрос ${current + 1}`;
+  document.getElementById('q-text').textContent  = q.text;
+  document.getElementById('q-label').textContent = `Вопрос ${current + 1} / ${tot}`;
+  document.getElementById('q-score').textContent = `✅ ${score}`;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  hideFeedback();
+
+  const letters = ['А', 'Б', 'В', 'Г', 'Д'];
+  const wrap = document.getElementById('answers-wrap');
+  wrap.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.innerHTML = `<span class="letter">${letters[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => selectAnswer(i, btn);
+    wrap.appendChild(btn);
+  });
+}
+
+/* ─── Выбор ответа ─── */
+function selectAnswer(idx, btn) {
+  if (locked) return;
+  locked = true;
+
+  const q       = questions[current];
+  const correct = q.correct;
+  const btns    = [...document.querySelectorAll('.answer-btn')];
+  btns.forEach(b => b.disabled = true);
+
+  if (idx === correct) {
+    /* ✅ Верно */
+    btn.classList.add('correct');
+    score++;
+    document.getElementById('q-score').textContent = `✅ ${score}`;
+    tg?.HapticFeedback?.notificationOccurred?.('success');
+    hideFeedback();
+
+    setTimeout(() => {
+      current++;
+      if (current >= questions.length) {
+        showSuccess();
+      } else {
+        const scr = document.getElementById('screen-question');
+        scr.style.animation = 'none';
+        requestAnimationFrame(() => { scr.style.animation = ''; renderQuestion(); });
+      }
+    }, 700);
+
+  } else {
+    /* ❌ Неверно — подсветить, показать сообщение, через 900мс дать попробовать снова */
+    btn.classList.add('wrong');
+    tg?.HapticFeedback?.notificationOccurred?.('error');
+    showFeedback();
+
+    setTimeout(() => {
+      btn.classList.remove('wrong');
+      btns.forEach(b => { b.disabled = false; });
+      hideFeedback();
+      locked = false;
+    }, 900);
+  }
+}
+
+function showFeedback() {
+  document.getElementById('feedback-msg').classList.add('visible');
+}
+function hideFeedback() {
+  document.getElementById('feedback-msg').classList.remove('visible');
+}
+
+/* ─── Экран успеха ─── */
+function showSuccess() {
+  document.getElementById('score-ok').textContent    = score;
+  document.getElementById('score-total').textContent = questions.length;
+  document.getElementById('progress-bar').style.width = '100%';
+  show('screen-success');
+  tg?.HapticFeedback?.notificationOccurred?.('success');
+}
+
+/* ─── Войти в чат: отправить данные боту и закрыть ─── */
+function enterGroup() {
+  const payload = JSON.stringify({
+    status: 'passed',
+    score:  score,
+    total:  questions.length,
+  });
+
+  if (tg?.sendData) {
+    tg.sendData(payload);
+    /* Telegram закрывает мини-апп автоматически после sendData */
+  } else {
+    /* Фолбэк при открытии в браузере */
+    alert('(тест в браузере) payload: ' + payload);
+  }
+
+  setTimeout(() => tg?.close?.(), 400);
+}
+</script>
+</body>
+</html>
