@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Верификация</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --tg-bg:        var(--tg-theme-bg-color, #0f0f13);
+      --tg-secondary: var(--tg-theme-secondary-bg-color, #1a1a24);
+      --tg-text:      var(--tg-theme-text-color, #ffffff);
+      --tg-hint:      var(--tg-theme-hint-color, #8e8e93);
+      --tg-button:    var(--tg-theme-button-color, #6c63ff);
+      --tg-btn-text:  var(--tg-theme-button-text-color, #ffffff);
+      --green: #30d158;
+      --red:   #ff453a;
+      --radius-card: 24px;
+      --radius-btn:  16px;
+      --transition:  0.3s cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--tg-bg);
+      color: var(--tg-text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior-y: none;
+    }
+
+    /* ── Фоновые блобы ── */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+      animation: blobFloat 8s ease-in-out infinite alternate;
+    }
+    .blob-1 { width: 340px; height: 340px; background: #6c63ff; top: -80px; left: -80px; animation-delay: 0s; }
+    .blob-2 { width: 260px; height: 260px; background: #30d158; bottom: -60px; right: -60px; animation-delay: -3s; }
+    .blob-3 { width: 180px; height: 180px; background: #ff6b6b; top: 40%; left: 50%; animation-delay: -5s; }
+    @keyframes blobFloat {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(20px, 30px) scale(1.08); }
+    }
+
+    #app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 32px 16px 48px;
+    }
+
+    /* ── Screens ── */
+    .screen {
+      width: 100%;
+      max-width: 440px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+    .screen.active {
+      display: flex;
+      animation: fadeUp .45s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(32px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── Logo / icon ── */
+    .logo {
+      width: 88px; height: 88px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #6c63ff, #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 44px;
+      box-shadow: 0 12px 40px rgba(108,99,255,.45), 0 0 0 1px rgba(255,255,255,.06);
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 12px 40px rgba(108,99,255,.45), 0 0 0 1px rgba(255,255,255,.06); }
+      50%       { box-shadow: 0 12px 56px rgba(108,99,255,.7),  0 0 0 1px rgba(255,255,255,.10); }
+    }
+
+    .screen-title {
+      font-size: 28px; font-weight: 800;
+      text-align: center; line-height: 1.15;
+      letter-spacing: -.4px;
+    }
+    .screen-sub {
+      font-size: 15px; color: var(--tg-hint);
+      text-align: center; line-height: 1.6;
+      max-width: 340px;
+    }
+
+    /* ── Glass card ── */
+    .glass-card {
+      width: 100%;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: var(--radius-card);
+      padding: 20px 18px;
+    }
+
+    /* ── Rules list ── */
+    .rules-list {
+      display: flex; flex-direction: column; gap: 10px;
+      font-size: 14px; line-height: 1.5; color: var(--tg-hint);
+    }
+    .rules-list li {
+      list-style: none;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .rules-list li::before {
+      content: '';
+      margin-top: 6px;
+      min-width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--tg-button);
+      opacity: .7;
+    }
+    .rules-list h3 {
+      font-size: 16px; font-weight: 700;
+      color: var(--tg-text); margin-bottom: 14px;
+    }
+
+    /* ── Checkbox ── */
+    .checkbox-wrap {
+      width: 100%;
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius-btn);
+      padding: 14px 18px;
+      cursor: pointer; user-select: none;
+      transition: var(--transition);
+    }
+    .checkbox-wrap:hover { background: rgba(255,255,255,.07); }
+    .checkbox-wrap input[type="checkbox"] {
+      appearance: none; -webkit-appearance: none;
+      width: 24px; height: 24px; min-width: 24px;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,.2);
+      background: transparent;
+      cursor: pointer; transition: var(--transition); position: relative;
+    }
+    .checkbox-wrap input[type="checkbox"]:checked {
+      background: var(--green); border-color: var(--green);
+    }
+    .checkbox-wrap input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px; top: 2px;
+      width: 10px; height: 6px;
+      border-left: 2.5px solid #fff; border-bottom: 2.5px solid #fff;
+      transform: rotate(-45deg);
+    }
+    .checkbox-wrap span { font-size: 15px; font-weight: 500; line-height: 1.4; }
+
+    /* ── Main button ── */
+    .main-btn {
+      width: 100%; height: 58px;
+      border: none; border-radius: var(--radius-btn);
+      font-size: 17px; font-weight: 700;
+      cursor: pointer; transition: var(--transition);
+      outline: none; letter-spacing: -.1px;
+    }
+    .main-btn:active:not(:disabled) { opacity: .88; transform: scale(.98); }
+    .main-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, #6c63ff, #a78bfa);
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(108,99,255,.4);
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #30d158, #34c759);
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(48,209,88,.4);
+    }
+
+    /* ── Math screen ── */
+    .math-label {
+      font-size: 13px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--tg-button);
+      opacity: .85;
+    }
+
+    .math-expr {
+      font-size: 52px; font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff, rgba(255,255,255,.7));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+      line-height: 1;
+      padding: 8px 0;
+      user-select: none;
+    }
+
+    .math-question-card {
+      width: 100%;
+      background: rgba(108,99,255,.12);
+      border: 1px solid rgba(108,99,255,.3);
+      border-radius: var(--radius-card);
+      padding: 28px 20px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      position: relative; overflow: hidden;
+    }
+    .math-question-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(108,99,255,.2), transparent 70%);
+      pointer-events: none;
+    }
+
+    .answer-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .answer-btn {
+      background: rgba(255,255,255,.05);
+      border: 1.5px solid rgba(255,255,255,.1);
+      border-radius: 18px;
+      padding: 0;
+      height: 72px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; font-weight: 800;
+      color: var(--tg-text);
+      cursor: pointer;
+      transition: var(--transition);
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+      position: relative; overflow: hidden;
+    }
+    .answer-btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.08), transparent);
+      opacity: 0; transition: opacity .2s;
+    }
+    .answer-btn:hover:not(:disabled)::before { opacity: 1; }
+    .answer-btn:hover:not(:disabled) { border-color: rgba(108,99,255,.5); transform: translateY(-2px); }
+    .answer-btn:active:not(:disabled) { transform: scale(.95) translateY(0); }
+    .answer-btn:disabled { cursor: default; }
+
+    .answer-btn.correct {
+      border-color: var(--green);
+      background: rgba(48,209,88,.15);
+      animation: correctPop .4s cubic-bezier(.175,.885,.32,1.275);
+    }
+    .answer-btn.wrong {
+      border-color: var(--red);
+      background: rgba(255,69,58,.12);
+      animation: shake .4s ease;
+    }
+    @keyframes correctPop {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-6px); }
+      40%       { transform: translateX(6px); }
+      60%       { transform: translateX(-4px); }
+      80%       { transform: translateX(4px); }
+    }
+
+    /* ── Tries indicator ── */
+    .tries-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .try-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(255,255,255,.15);
+      transition: background .3s;
+    }
+    .try-dot.used { background: var(--red); }
+
+    /* ── Feedback toast ── */
+    .feedback-toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(255,69,58,.15);
+      border: 1px solid rgba(255,69,58,.4);
+      backdrop-filter: blur(12px);
+      border-radius: 100px;
+      padding: 12px 22px;
+      font-size: 14px; font-weight: 600; color: var(--red);
+      white-space: nowrap;
+      opacity: 0; transition: opacity .25s, transform .25s;
+      pointer-events: none; z-index: 100;
+    }
+    .feedback-toast.visible {
+      opacity: 1; transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Success ── */
+    .result-icon {
+      font-size: 96px;
+      animation: popIn .6s cubic-bezier(.175,.885,.32,1.275) both;
+    }
+    @keyframes popIn {
+      from { transform: scale(0) rotate(-15deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+    }
+
+    .confetti-wrap {
+      position: fixed; inset: 0; pointer-events: none; z-index: 200; overflow: hidden;
+    }
+    .conf-piece {
+      position: absolute;
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      opacity: 0;
+      animation: confettiFall 1.8s ease forwards;
+    }
+    @keyframes confettiFall {
+      0%   { opacity: 1; transform: translateY(-20px) rotate(0deg); }
+      100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+    }
+  </style>
+</head>
+<body>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+<div class="confetti-wrap" id="confetti-wrap"></div>
+
+<div id="app">
+
+  <!-- ══ ЭКРАН 1: Правила ══ -->
+  <div class="screen active" id="screen-terms">
+    <div class="logo">🛡️</div>
+    <div class="screen-title">Правила чата</div>
+    <div class="screen-sub">Ознакомься с правилами перед вступлением</div>
+
+    <div class="glass-card">
+      <ul class="rules-list">
+        <h3>Обязательно к прочтению</h3>
+        <li>Запрещён спам, флуд и реклама без разрешения администрации.</li>
+        <li>Общайся уважительно — грубость и оскорбления недопустимы.</li>
+        <li>Перед вопросом проверь закреплённые сообщения и историю чата.</li>
+        <li>Офф-топик публикуй только в разрешённых темах.</li>
+        <li>Вызывать администраторов без повода запрещено.</li>
+        <li>Нарушения правил ведут к предупреждениям или блокировке.</li>
+      </ul>
+    </div>
+
+    <label class="checkbox-wrap" for="agree-check">
+      <input type="checkbox" id="agree-check" onchange="onAgreeChange(this)" />
+      <span>Я прочитал(-а) и принимаю правила чата</span>
+    </label>
+
+    <button class="main-btn btn-primary" id="continue-btn" disabled onclick="startMath()">
+      Продолжить →
+    </button>
+  </div>
+
+  <!-- ══ ЭКРАН 2: Математика ══ -->
+  <div class="screen" id="screen-math">
+    <div class="math-label">Проверка безопасности</div>
+
+    <div class="math-question-card">
+      <div class="screen-sub" style="margin:0;">Реши пример и выбери правильный ответ</div>
+      <div class="math-expr" id="math-expr">–</div>
+      <div class="tries-row">
+        <div class="try-dot" id="dot-0"></div>
+        <div class="try-dot" id="dot-1"></div>
+        <div class="try-dot" id="dot-2"></div>
+      </div>
+    </div>
+
+    <div class="answer-grid" id="answer-grid"></div>
+
+    <div class="screen-sub" style="font-size:13px; opacity:.5;">
+      У тебя 3 попытки
+    </div>
+  </div>
+
+  <!-- ══ ЭКРАН 3: Успех ══ -->
+  <div class="screen" id="screen-success">
+    <div class="result-icon">🎉</div>
+    <div class="screen-title">Ты принят!</div>
+    <div class="screen-sub">
+      Верификация пройдена успешно.<br>
+      Добро пожаловать в чат!
+    </div>
+    <button class="main-btn btn-success" onclick="enterGroup()">
+      Войти в чат ✓
+    </button>
+  </div>
+
+</div>
+
+<div class="feedback-toast" id="feedback-toast">❌ Неверно, попробуй ещё раз!</div>
+
+<script>
+const SESSION_ID   = new URLSearchParams(window.location.search).get('session') || '';
+const BOT_USERNAME = 'NUSELESS_BOT';
+
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); tg.disableVerticalSwipes?.(); tg.BackButton?.hide(); }
+
+/* ── Утилиты ── */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.toggle('active', s.id === id);
+  });
+}
+function onAgreeChange(cb) {
+  document.getElementById('continue-btn').disabled = !cb.checked;
+}
+
+/* ── Математика ── */
+let correctAnswer = 0;
+let triesLeft     = 3;
+let triesUsed     = 0;
+let mathLocked    = false;
+
+function generateMath() {
+  const ops = ['+', '−', '×'];
+  const op  = ops[Math.floor(Math.random() * ops.length)];
+  let a, b, answer;
+
+  if (op === '+') {
+    a = rand(12, 89); b = rand(11, 89 - a + 11);
+    if (a + b > 99) b = rand(1, 9);
+    answer = a + b;
+  } else if (op === '−') {
+    a = rand(20, 99); b = rand(1, a - 1);
+    answer = a - b;
+  } else {
+    a = rand(2, 12); b = rand(2, 12);
+    answer = a * b;
+  }
+
+  const exprStr = `${a} ${op} ${b} = ?`;
+  const choices = generateChoices(answer);
+  return { exprStr, answer, choices };
+}
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateChoices(correct) {
+  const set = new Set([correct]);
+  while (set.size < 3) {
+    let delta = rand(1, 9) * (Math.random() < .5 ? 1 : -1);
+    let wrong = correct + delta;
+    if (wrong > 0 && wrong !== correct) set.add(wrong);
+  }
+  return shuffle([...set]);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startMath() {
+  triesLeft  = 3;
+  triesUsed  = 0;
+  mathLocked = false;
+  renderMath();
+  show('screen-math');
+}
+
+function renderMath() {
+  const { exprStr, answer, choices } = generateMath();
+  correctAnswer = answer;
+
+  document.getElementById('math-expr').textContent = exprStr;
+
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById(`dot-${i}`);
+    dot.classList.toggle('used', i < triesUsed);
+  }
+
+  const grid = document.getElementById('answer-grid');
+  grid.innerHTML = '';
+  choices.forEach(val => {
+    const btn = document.createElement('button');
+    btn.className  = 'answer-btn';
+    btn.textContent = val;
+    btn.onclick = () => selectAnswer(val, btn);
+    grid.appendChild(btn);
+  });
+
+  mathLocked = false;
+}
+
+function selectAnswer(val, btn) {
+  if (mathLocked) return;
+  mathLocked = true;
+
+  const allBtns = [...document.querySelectorAll('.answer-btn')];
+
+  if (val === correctAnswer) {
+    btn.classList.add('correct');
+    allBtns.forEach(b => b.disabled = true);
+    tg?.HapticFeedback?.notificationOccurred?.('success');
+    setTimeout(() => {
+      spawnConfetti();
+      show('screen-success');
+    }, 700);
+  } else {
+    btn.classList.add('wrong');
+    triesUsed++;
+    triesLeft--;
+    tg?.HapticFeedback?.notificationOccurred?.('error');
+
+    if (triesLeft <= 0) {
+      allBtns.forEach(b => b.disabled = true);
+      showToast('😔 Попытки исчерпаны. Попробуй снова.');
+      setTimeout(() => {
+        startMath();
+      }, 2000);
+    } else {
+      showToast(`❌ Неверно! Осталось попыток: ${triesLeft}`);
+      setTimeout(() => {
+        btn.classList.remove('wrong');
+        allBtns.forEach(b => { b.disabled = false; });
+        for (let i = 0; i < 3; i++) {
+          document.getElementById(`dot-${i}`).classList.toggle('used', i < triesUsed);
+        }
+        mathLocked = false;
+      }, 900);
+    }
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('feedback-toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 2200);
+}
+
+/* ── Конфетти ── */
+function spawnConfetti() {
+  const wrap   = document.getElementById('confetti-wrap');
+  const colors = ['#6c63ff','#30d158','#ffd60a','#ff6b6b','#a78bfa','#34aadc'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'conf-piece';
+    el.style.cssText = `
+      left: ${rand(0, 100)}%;
+      top: -10px;
+      background: ${colors[rand(0, colors.length - 1)]};
+      animation-delay: ${(rand(0, 600) / 1000).toFixed(2)}s;
+      animation-duration: ${(1.4 + rand(0, 8) / 10).toFixed(1)}s;
+      transform: rotate(${rand(0, 360)}deg);
+      width: ${rand(6,12)}px; height: ${rand(6,12)}px;
+      border-radius: ${rand(0,1) ? '50%' : '2px'};
+    `;
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+}
+
+/* ── Отправка результата боту ── */
+function enterGroup() {
+  if (SESSION_ID && tg) {
+    const deepLink = `https://t.me/${BOT_USERNAME}?start=verified_${SESSION_ID}`;
+    tg.openTelegramLink(deepLink);
+    setTimeout(() => tg.close(), 600);
+  } else {
+    alert('(тест в браузере) session=' + SESSION_ID);
+  }
+}
+</script>
+</body>
+</html>
