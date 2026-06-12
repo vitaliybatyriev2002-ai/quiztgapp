@@ -171,21 +171,17 @@
 
     /* ── Коллапс правил ── */
     .rules-toggle {
-      width: 100%;
-      display: flex; align-items: center; justify-content: space-between;
-      background: none; border: none; color: var(--tg-text);
-      cursor: pointer; padding: 0; margin-bottom: 0;
-      font-size: 16px; font-weight: 700;
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(108,99,255,.15); border: none; color: #a78bfa;
+      cursor: pointer; padding: 5px 10px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
       -webkit-tap-highlight-color: transparent;
-    }
-    .rules-toggle-icon {
-      width: 24px; height: 24px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(108,99,255,.18); border-radius: 50%;
-      transition: transform var(--transition);
       flex-shrink: 0;
     }
-    .rules-toggle-icon svg { width: 12px; height: 12px; fill: #a78bfa; transition: transform var(--transition); }
+    .rules-toggle-icon {
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rules-toggle-icon svg { width: 11px; height: 11px; fill: #a78bfa; transition: transform var(--transition); }
     .rules-collapsible {
       overflow: hidden;
       max-height: 0;
@@ -489,14 +485,16 @@
     <div class="screen-sub">Ознакомься с правилами перед вступлением</div>
 
     <div class="glass-card">
-      <button class="rules-toggle" onclick="toggleRules(this)" aria-expanded="false">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div class="rules-header" style="margin-bottom:0;">Обязательно к прочтению</div>
-        <span class="rules-toggle-icon">
-          <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
-        </span>
-      </button>
+        <button class="rules-toggle" onclick="toggleRules(this)" aria-expanded="false">
+          <span id="rules-btn-label">Раскрыть</span>
+          <span class="rules-toggle-icon">
+            <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4"/></svg>
+          </span>
+        </button>
+      </div>
       <div class="rules-collapsible">
-      <div style="height:14px;"></div>
       <ul class="rules-list">
 
         <li>
@@ -596,15 +594,6 @@
       </div><!-- /.rules-collapsible -->
     </div>
 
-    <a class="contact-block" href="https://t.me/ChismeMl?text=Привет%2C%20у%20меня%20вопрос!" target="_blank">
-      <img class="contact-avatar" src="picture/julia.jpg" alt="Julia" />
-      <div class="contact-text">
-        <div class="contact-label">Вопросы? Пиши мне</div>
-        <div class="contact-name">@ChismeMl</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)"><path d="M10 6l6 6-6 6"/></svg>
-    </a>
-
     <label class="checkbox-wrap" for="agree-check">
       <input type="checkbox" id="agree-check" onchange="onAgreeChange(this)" />
       <span>Я прочитал(-а) и принимаю правила чата</span>
@@ -613,6 +602,16 @@
     <button class="main-btn btn-primary" id="continue-btn" disabled onclick="startMath()">
       Продолжить →
     </button>
+
+    <a class="contact-block" href="https://t.me/ChismeMl?text=Привет%2C%20у%20меня%20вопрос!" target="_blank">
+      <img class="contact-avatar" src="picture/julia.jpg" alt="Julia" />
+      <div class="contact-text">
+        <div class="contact-label">Вопросы? Пиши мне</div>
+        <div class="contact-name">@ChismeMl</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><path d="M10 6l6 6-6 6"/></svg>
+    </a>
+
   </div>
 
   <!-- ══ ЭКРАН 2: Математика ══ -->
@@ -827,11 +826,13 @@ initPlayer();
 
 /* ── Коллапс правил ── */
 function toggleRules(btn) {
-  const content = btn.nextElementSibling;
+  const content = btn.closest('.glass-card').querySelector('.rules-collapsible');
   const icon = btn.querySelector('.rules-toggle-icon');
+  const label = btn.querySelector('span:first-child');
   const isOpen = content.classList.toggle('open');
   icon.classList.toggle('open', isOpen);
   btn.setAttribute('aria-expanded', isOpen);
+  label.textContent = isOpen ? 'Свернуть' : 'Раскрыть';
 }
 
 /* ═══════════════════════════
