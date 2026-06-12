@@ -1,0 +1,32 @@
+name: Обновить плейлист
+
+on:
+  push:
+    paths:
+      - 'music/**'
+
+jobs:
+  build-playlist:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Скачать репозиторий
+        uses: actions/checkout@v4
+
+      - name: Установить Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Сгенерировать playlist.json
+        run: node build-playlist.js
+
+      - name: Сохранить playlist.json в репозиторий
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add music/playlist.json
+          git diff --staged --quiet || git commit -m "🎵 Обновить playlist.json"
+          git push
